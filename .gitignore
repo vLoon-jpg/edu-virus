@@ -1,0 +1,11 @@
+*.exe
+*.zip
+__pycache__/
+.idea/
+graphify-out/cache/
+*.pyc
+build/
+*.spec
+agents.json
+history.json
+ngrok.zip
