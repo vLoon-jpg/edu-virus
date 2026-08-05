@@ -1,17 +1,11 @@
-# boot.py — runs before code.py
-# Disables USB mass storage so CIRCUITPY drive doesn't show on target
-# The Pico still works as HID keyboard, just no file access
-# 
-# WARNING: Once you flash this, you can't edit files on the Pico 
-# without factory reset! Only use on the deploy version.
+# boot.py — runs before code.py on CircuitPython
+# Disables USB mass storage so CIRCUITPY drive doesn't show on target.
+# The board still enumerates as HID keyboard.
 #
-# To recover: hold BOOTSEL → reflash CircuitPython .uf2
+# ⚠️ ONCE FLASHED: you can't edit files without factory reset.
+#    Hold BOOT + tap RESET → release BOOT → reflash CircuitPython .uf2
+#
+# TEST WITHOUT THIS FIRST. Only deploy boot.py once code.py is verified.
 
 import storage
-import usb_cdc
-
-# Disable USB drive (CIRCUITPY) — target sees only keyboard
 storage.disable_usb_drive()
-
-# Optional: disable serial too for full stealth
-# usb_cdc.disable()
