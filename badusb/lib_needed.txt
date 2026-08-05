@@ -1,0 +1,22 @@
+# Required CircuitPython libraries for the BadUSB payload
+# 
+# Download the bundle zip matching your CircuitPython version:
+# https://circuitpython.org/libraries
+#
+# From the zip, extract these folders into CIRCUITPY/lib/:
+#
+# lib/
+#   adafruit_hid/
+#     __init__.mpy
+#     keyboard.mpy
+#     keyboard_layout_us.mpy
+#     keycode.mpy
+#     consumer_control.mpy
+#     mouse.mpy
+#
+# Only keyboard.mpy, keyboard_layout_us.mpy, and keycode.mpy are
+# strictly needed. The rest won't hurt.
+#
+# Check CircuitPython version with:
+#   import sys; print(sys.version)
+#   (appears in REPL or as a boot_out.txt on CIRCUITPY)
