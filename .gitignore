@@ -1,17 +1,17 @@
-*.exe
-*.zip
-__pycache__/
-.idea/
-graphify-out/cache/
-*.pyc
-build/
+# Build secrets
+build.py
+secrets.json
 *.spec
-agents.json
-history.json
-ngrok.zip
+build/
+dist/
+hydra/core.py.bak
 
-# Token/secret files — NEVER commit
-tok*.bin
-token_*.txt
-token_*.bin
-*.token
+# PyInstaller / Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS junk
+Thumbs.db
+.DS_Store
+Desktop.ini

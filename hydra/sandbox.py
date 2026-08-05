@@ -148,8 +148,9 @@ def _check_disk() -> bool:
             "C:\\", None, ctypes.byref(total), ctypes.byref(free)
         )
         gb = total.value / (1024**3)
-        if gb < 40:  # Tiny disk = VM
+        if gb < 20:  # Truly tiny disk (<20GB = almost certainly a VM)
             return True
+        # Budget school PCs often have 32-64GB — don't flag those
     except:
         pass
     return False

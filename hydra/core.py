@@ -109,6 +109,15 @@ PROFILES = {
 def main(profile=None):
     """Entry point. Called from PyInstaller stub or directly."""
     global BUILD_PROFILE
+
+    # ── Watchdog mode ──
+    if "--watchdog" in sys.argv:
+        idx = sys.argv.index("--watchdog")
+        if idx + 1 < len(sys.argv):
+            from hydra.watchdog import watchdog_entry
+            watchdog_entry(sys.argv[idx + 1])
+            return
+
     if profile:
         BUILD_PROFILE = profile
 
