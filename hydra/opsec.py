@@ -11,10 +11,15 @@ import ctypes
 
 
 def wipe_logs(is_admin: bool = False):
-    """Clear forensic traces."""
+    """Clear forensic traces — all user-level, plus admin-only extras."""
     _clear_ps_history()
     _clear_mru()
+    _clear_recent_files()
+    _clear_jump_lists()
+    _clear_userassist()
+    _clear_muicache()
     _clear_prefetch()
+    _flush_dns()
 
     if is_admin:
         _clear_event_logs()
@@ -76,6 +81,106 @@ def _clear_prefetch():
                     os.remove(os.path.join(prefetch, f))
                 except:
                     pass
+    except:
+        pass
+
+
+def _clear_recent_files():
+    """Clear %APPDATA%\Microsoft\Windows\Recent (no admin needed)."""
+    try:
+        recent = os.path.join(
+            os.environ.get("APPDATA", ""),
+            "Microsoft", "Windows", "Recent"
+        )
+        if os.path.isdir(recent):
+            for f in os.listdir(recent):
+                try:
+                    fp = os.path.join(recent, f)
+                    if f.endswith(".lnk"):
+                        os.remove(fp)
+                except:
+                    pass
+    except:
+        pass
+
+
+def _clear_jump_lists():
+    """Clear Jump Lists (automaticDestinations + customDestinations)."""
+    try:
+        recent = os.path.join(
+            os.environ.get("APPDATA", ""),
+            "Microsoft", "Windows", "Recent"
+        )
+        for pattern in ["AutomaticDestinations", "CustomDestinations"]:
+            d = os.path.join(recent, pattern)
+            if os.path.isdir(d):
+                for f in os.listdir(d):
+                    try:
+                        os.remove(os.path.join(d, f))
+                    except:
+                        pass
+    except:
+        pass
+
+
+def _clear_userassist():
+    """Clear UserAssist registry key (GUI program launch history)."""
+    try:
+        import winreg
+        key_path = (
+            r"Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist"
+        )
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path,
+                            0, winreg.KEY_READ) as root:
+            for i in range(winreg.QueryInfoKey(root)[0]):
+                subkey_name = winreg.EnumKey(root, i)
+                try:
+                    with winreg.OpenKey(root, subkey_name, 0,
+                                        winreg.KEY_READ | winreg.KEY_SET_VALUE) as sk:
+                        with winreg.OpenKey(sk, "Count", 0,
+                                            winreg.KEY_READ | winreg.KEY_SET_VALUE) as ck:
+                            # Delete all values
+                            for j in range(winreg.QueryInfoKey(ck)[1]):
+                                try:
+                                    name = winreg.EnumValue(ck, j)[0]
+                                    winreg.DeleteValue(ck, name)
+                                except:
+                                    pass
+                except:
+                    pass
+    except:
+        pass
+
+
+def _clear_muicache():
+    """Clear MUICache (executable name cache in registry)."""
+    try:
+        import winreg
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache",
+            0, winreg.KEY_SET_VALUE | winreg.KEY_READ
+        ) as key:
+            info = winreg.QueryInfoKey(key)
+            for i in range(info[1] - 1, -1, -1):
+                try:
+                    name = winreg.EnumValue(key, i)[0]
+                    winreg.DeleteValue(key, name)
+                except:
+                    pass
+    except:
+        pass
+
+
+def _flush_dns():
+    """Flush DNS cache (ipconfig /flushdns)."""
+    try:
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        subprocess.run(
+            ["ipconfig", "/flushdns"],
+            startupinfo=si, capture_output=True, timeout=10
+        )
     except:
         pass
 

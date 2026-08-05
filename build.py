@@ -138,6 +138,13 @@ def build(profile="stealth"):
     if cfg.get("strip"):
         pyinstaller_cmd.extend(["--strip"])
 
+    # Encrypt bytecode so uncompyle6 can't extract source
+    pyinstaller_encrypt_key = os.environ.get(
+        "HYDRA_ENCRYPT_KEY",
+        f"hydra_v4_{str(int(time.time()))[-6:]}"
+    )
+    pyinstaller_cmd.extend(["--key", pyinstaller_encrypt_key])
+
     if cfg.get("upx"):
         pyinstaller_cmd.extend(["--upx-dir", _find_upx_dir()])
 
