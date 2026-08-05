@@ -1,0 +1,1 @@
+"""Hydra v4 — Modular educational implant framework."""
